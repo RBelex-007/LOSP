@@ -18,52 +18,38 @@ This document tracks the current development status, completed tasks, ongoing wo
 
 ## 🛠 Module & Component Progress
 
-### 1. Timer Subsystem (`src/timer.cpp`) — Status: 🟡 In Progress
-- [x] POSIX `setitimer` configuration with `ITIMER_PROF`.
-- [x] Configurable default interval (10 ms / 100 Hz sampling frequency).
-- [ ] Support for dynamic sampling frequencies (100 Hz – 1000 Hz via CLI arguments).
-- [ ] Thread-specific timer handling using `timer_create(CLOCK_THREAD_CPUTIME_ID, ...)` for multi-threaded applications.
+### 1. Build System & Repository Setup — Status: ✅ Completed
+- [x] Created `.gitignore` ignoring build binaries, `.exe`, `.o`, and OS artifacts.
+- [x] Clean compilation verified with `g++ -std=c++11 -Iinclude -fno-omit-frame-pointer`.
+- [x] Cross-platform compatibility shims for Windows (MinGW) and Linux (WSL/GCC).
 
-### 2. Collector & Unwinder Subsystem (`src/collector.cpp`) — Status: 🟡 In Progress
-- [x] `SIGPROF` signal action handler setup (`setup_signal_hanler`).
+### 2. Header & API Contracts (`include/profile.h`) — Status: ✅ Completed
+- [x] `#ifndef PROFILE_H` guards and `extern "C"` linkage blocks.
+- [x] `StackTrace` struct with `operator==` and `operator<` for map-based trace grouping.
+- [x] API function prototypes (`setup_signal_handler`, `start_timer`, `stop_timer`, `print_profile_summary`, `export_flamegraph`).
+
+### 3. Collector & Unwinder Subsystem (`src/collector.cpp`) — Status: ✅ Completed
+- [x] `SIGPROF` signal action handler setup (`setup_signal_handler`).
 - [x] Fast x86_64 frame pointer (`RBP`) stack trace unwinding (`__builtin_frame_address(0)`).
-- [x] Maximum stack depth limit enforcement (default: 64 frames).
-- [x] Infinite loop guard via stack pointer progression check (`next_rbp <= rbp`).
-- [ ] **Async-Signal Safety Audit**: Remove non-async-signal-safe calls in signal handler context.
-- [ ] Lock-free ring buffer implementation for zero-allocation sample collection.
-- [ ] Fallback unwinder (`libunwind` or DWARF `.eh_frame` parser) for binaries compiled with `-fomit-frame-pointer`.
+- [x] Maximum stack depth limit enforcement (64 frames).
+- [x] Infinite loop guard via pointer type checking (`next_rbp <= current_rbp`).
+- [x] Address-to-symbol resolution (`resolve_symbol`) using `dladdr()` and C++ demangling (`abi::__cxa_demangle`).
+- [x] Stack trace aggregation map with sample frequency percentages.
+- [x] FlameGraph collapsed stack exporter (`export_flamegraph("profile.folded")`).
 
-### 3. Data Structures & Types (`include/profile.h`) — Status: 🟡 In Progress
-- [x] `StackTrace` structure defining fixed-size frame arrays (`uintptr_t frames[64]`) and depth index.
-- [ ] `SampleBuffer` ring buffer structure definition.
-- [ ] Atomic reader/writer pointers for concurrent safe sampling.
+### 4. Timer Subsystem (`src/timer.cpp`) — Status: ✅ Completed
+- [x] POSIX `setitimer` configuration with `ITIMER_PROF`.
+- [x] Parameterized sampling interval (`start_timer(int interval_ms)`).
+- [x] Timer disarming and shutdown routine (`stop_timer()`).
 
-### 4. Main Entry Point & Test Harness (`losp.c`) — Status: 🟡 In Progress
-- [x] Initial header inclusions (`signal.h`, `sys/time.h`, `iostream`).
-- [ ] Complete test workload generator (CPU-bound loops, recursive call chains).
-- [ ] Profiler lifecycle management (`losp_init()`, `losp_start()`, `losp_stop()`, `losp_dump()`).
-
-### 5. Symbolication & Reporting Engine — Status: 🔴 Pending
-- [ ] `/proc/self/maps` dynamic memory map parser to obtain base load addresses.
-- [ ] Symbol resolution using `dladdr`, `libbacktrace`, or ELF symbol tables (`libelf`).
-- [ ] C++ symbol demangling (`abi::__cxa_demangle`).
-- [ ] FlameGraph collapsed stack format exporter (`.folded` format).
-- [ ] Console summary report generator (top hot functions and stack hit counters).
+### 5. Main Entry Point & Test Harness (`losp.c`) — Status: ✅ Completed
+- [x] Executable `main()` test harness.
+- [x] Simulated CPU-intensive call chain (`worker_thread_simulation` -> `compute_heavy_task` -> `inner_workload`).
+- [x] Profiler lifecycle execution, summary output, and `.folded` FlameGraph file output.
 
 ---
 
-## 🐛 Known Technical Debt & Issues
+## 🎯 Next Roadmap Steps
 
-1. **Typo in Signal Handler Function**: `setup_signal_hanler()` in `src/collector.cpp` is missing an 'd' (`setup_signal_handler`). Needs API cleanup.
-2. **Missing Test Harness Implementation**: `losp.c` has header includes but lacks executable logic (`main()` entry point).
-3. **Async Signal Safety**: Local stack allocation in `profile_handler` needs to dump directly into a static lock-free ring buffer to avoid stack overflow risks in restricted signal contexts.
-4. **C vs C++ Linkage**: Mixing C (`losp.c`) and C++ (`src/collector.cpp`, `src/timer.cpp`) requires explicit `extern "C"` blocks in headers for C link compatibility.
-
----
-
-## 🎯 Next Immediate Steps
-
-1. Clean up header declarations in `include/profile.h` with `extern "C"` declarations and function prototypes (`setup_signal_handler`, `start_timer`).
-2. Implement a static lock-free ring buffer in `include/profile.h` / `src/collector.cpp`.
-3. Complete `losp.c` with a working test program and profile report summary printer.
-4. Add a `Makefile` or `CMakeLists.txt` for standardized cross-platform / Linux builds.
+1. **Lock-Free Ring Buffer**: Upgrade sample storage to an atomic ring buffer for high-frequency multi-threaded sampling.
+2. **DWARF / libunwind Fallback**: Support stack unwinding for binaries compiled without frame pointers (`-fomit-frame-pointer`).
