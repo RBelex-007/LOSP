@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <atomic>
 
 #define MAX_STACK_DEPTH 64
 #define MAX_SAMPLES 1024
@@ -37,12 +38,13 @@ typedef struct StackTrace {
 
 // Global container for profile sample collection
 typedef struct {
-    StackTrace samples[MAX_SAMPLES];
-    size_t sample_count;
-} ProfileData;
+    StackTrace buffer[MAX_SAMPLES];
+    std::atomic<size_t> head;
+    std::atomic<size_t> tail;
+} RingBuffer;
 
 // Global profile data instance declaration
-extern ProfileData g_profile_data;
+extern RingBuffer g_ring_buffer;
 
 // Core profiler API function declarations
 void setup_signal_handler(void);
