@@ -16,8 +16,10 @@ extern "C" {
 typedef struct StackTrace {
     uintptr_t frames[MAX_STACK_DEPTH];
     size_t depth;
+    uint32_t tid; // Thread ID (TID) that captured this sample
 
     bool operator==(const StackTrace& other) const {
+        if (tid != other.tid) return false;
         if (depth != other.depth) return false;
 
         for (size_t i = 0; i < depth; ++i) {
@@ -27,6 +29,7 @@ typedef struct StackTrace {
     }
 
     bool operator<(const StackTrace& other) const {
+        if (tid != other.tid) return tid < other.tid;
         if (depth != other.depth) return depth < other.depth;
 
         for (size_t i = 0; i < depth; ++i) {
@@ -48,11 +51,20 @@ extern RingBuffer g_ring_buffer;
 
 // Core profiler API function declarations
 void setup_signal_handler(void);
+
+// Process-wide timer API (setitimer)
 void start_timer(int interval_ms);
 void stop_timer(void);
+
+// Per-thread timer API (timer_create + CLOCK_THREAD_CPUTIME_ID)
+void start_thread_timer(int interval_ms);
+void stop_thread_timer(void);
+
+// Statistics and export API
 size_t get_sample_count(void);
 void print_profile_summary(void);
 void export_flamegraph(const char* filepath);
+void export_speedscope(const char* filepath);
 
 #ifdef __cplusplus
 }

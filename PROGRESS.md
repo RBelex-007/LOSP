@@ -31,16 +31,20 @@ This document tracks the current development status, completed tasks, ongoing wo
 ### 3. Collector & Unwinder Subsystem (`src/collector.cpp`) — Status: ✅ Completed
 - [x] `SIGPROF` signal action handler setup (`setup_signal_handler`).
 - [x] Fast x86_64 frame pointer (`RBP`) stack trace unwinding (`__builtin_frame_address(0)`).
+- [x] DWARF `.eh_frame` fallback unwinding via `libunwind` (`unw_init_local`, `unw_step`, `unw_get_reg`).
+- [x] Hybrid fast-path + fallback unwinding strategy.
 - [x] Maximum stack depth limit enforcement (64 frames).
 - [x] Infinite loop guard via pointer type checking (`next_rbp <= current_rbp`).
 - [x] Lock-Free Atomic Ring Buffer (`RingBuffer`) with `std::atomic<size_t>` head/tail for async-signal safety.
-- [x] Address-to-symbol resolution (`resolve_symbol`) using `dladdr()` and C++ demangling (`abi::__cxa_demangle`).
 - [x] Stack trace aggregation map with sample frequency percentages.
 - [x] FlameGraph collapsed stack exporter (`export_flamegraph("profile.folded")`).
+- [x] Speedscope interactive JSON profile exporter (`export_speedscope("profile.speedscope.json")`).
 
 ### 4. Timer Subsystem (`src/timer.cpp`) — Status: ✅ Completed
-- [x] POSIX `setitimer` configuration with `ITIMER_PROF`.
+- [x] POSIX `setitimer` configuration with `ITIMER_PROF` for process-wide profiling.
 - [x] Parameterized sampling interval (`start_timer(int interval_ms)`).
+- [x] Per-thread POSIX timers using `timer_create` with `CLOCK_THREAD_CPUTIME_ID` and `SIGEV_THREAD_ID`.
+- [x] Per-thread timer lifecycle routines (`start_thread_timer`, `stop_thread_timer`).
 - [x] Timer disarming and shutdown routine (`stop_timer()`).
 
 ### 5. Symbolizer Subsystem (`src/symbolizer.cpp`, `include/symbolizer.h`) — Status: ✅ Completed
@@ -50,16 +54,24 @@ This document tracks the current development status, completed tasks, ongoing wo
 - [x] Multi-tier symbol resolution (`dladdr` -> demangle -> proc maps module+offset -> hex fallback).
 - [x] Symbol caching (`std::unordered_map<uintptr_t, std::string>`).
 
-### 6. Main Entry Point & Test Harness (`losp.c`) — Status: ✅ Completed
+### 6. Main Entry Point & Multi-Thread Test Harness (`losp.c`) — Status: ✅ Completed
 - [x] Executable `main()` test harness.
-- [x] Simulated CPU-intensive call chain (`worker_thread_simulation` -> `compute_heavy_task` -> `inner_workload`).
-- [x] Profiler lifecycle execution, summary output, and `.folded` FlameGraph file output.
+- [x] Multi-threaded workload simulation using `pthread_create` with concurrent worker threads.
+- [x] Distinct parallel execution chains (math computation, bitwise hashing, and main workload).
+- [x] Per-thread profiling aggregation, summary output with TID breakdown, and `.folded` FlameGraph export.
+- [x] Automatic Speedscope JSON export (`profile.speedscope.json`).
+
+### 7. Performance & Overhead Benchmarking (`benchmark.cpp`) — Status: ✅ Completed
+- [x] Automated benchmark comparing baseline vs 100 Hz vs 1000 Hz profiling.
+- [x] Microsecond-accurate overhead calculation and pass/eval criteria.
 
 ---
 
 ## 🎯 Next Roadmap Steps
 
-1. **DWARF / libunwind Fallback**: Support stack unwinding for binaries compiled without frame pointers (`-fomit-frame-pointer`).
-2. **Phase 4: Multi-Thread Support**: Per-thread timers using `timer_create(CLOCK_THREAD_CPUTIME_ID, ...)` with thread-local ring buffers.
+1. **Native Windows Backend**: Implement native Windows kernel / multimedia timers and `CaptureStackBackTrace()` + `DbgHelp` for native Windows profiling.
+2. **pprof Protobuf Exporter**: Support Google/Go `pprof` binary format.
+
+
 
 
