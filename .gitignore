@@ -8,6 +8,13 @@
 *.dylib
 losp
 losp.exe
+benchmark.exe
+
+# Profiling Output Dumps
+profile.folded
+profile.speedscope.json
+*.folded
+*.speedscope.json
 
 # Build directories
 build/
